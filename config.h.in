@@ -51,4 +51,5 @@
 #cmakedefine HAVE_STRNCPY
 #cmakedefine HAVE_MPI_INIT
 #cmakedefine HAVE_MPI_FINALIZE
+#cmakedefine HAVE_ATTRIBUTE_CLEANUP
 #endif /* CONFIG_H */

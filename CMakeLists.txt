@@ -34,6 +34,7 @@ include(FindHeaders)
 include(FindFunctions)
 include(FindSymbols)
 include(FindLibraries)
+include(TestCompiler)
 
 # -------------------
 # Set project version

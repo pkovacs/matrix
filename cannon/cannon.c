@@ -36,14 +36,17 @@
 #include <string.h>
 #include <mpi.h>
 
+#ifdef HAVE_ATTRIBUTE_CLEANUP
 #define AUTO_PTR(free_fn) __attribute__((cleanup (free_fn)))
+#else
+#define AUTO_PTR(free_fn)
+#endif
 
+void free_array(int **A);
 void initialize(int argc, char *argv[], int *N, int **A, int **B, int **C);
+void matrix_mult(int N, int *A, int *B, int *C);
 void matrix_read(FILE *fp, int *N, int **A, int **B);
 void matrix_print(const char *desc, int N, int *A);
-void matrix_shift_row_left(int row, int N, int *A);
-void matrix_shift_col_up(int col, int N, int *B);
-void matrix_free(int **M);
 
 /*
  * Print program usage.
@@ -66,139 +69,182 @@ void usage()
  */
 int main(int argc, char *argv[])
 {
+    // Rank 0 matrices
+    AUTO_PTR(free_array) int *A = NULL;
+    AUTO_PTR(free_array) int *B = NULL;
+    AUTO_PTR(free_array) int *C = NULL;
+
+    // Local submatrices
+    AUTO_PTR(free_array) int *local_A = NULL;
+    AUTO_PTR(free_array) int *local_B = NULL;
+    AUTO_PTR(free_array) int *local_C = NULL;
+
     int N = 0;
-    AUTO_PTR(matrix_free) int *A = NULL;
-    AUTO_PTR(matrix_free) int *B = NULL;
-    AUTO_PTR(matrix_free) int *C = NULL;
-    int i, j, k;
-    int rank, size;
-    int rank_left, rank_right, rank_down, rank_up;
-    int dims[2];
+    int i;
+    int rank, procs;
+    int left, right, down, up;
     int coords[2];
-    int local_data[2];
-    int local_sum = 0;
     const int periods[2] = { 1, 1 };
+    const int starts[2] = { 0, 0 };
     const int reorder = 1;
-    const size_t dims_sz = sizeof(dims)/sizeof(dims[0]);
-    MPI_Comm cartesian;
+    MPI_Comm cart_comm;
+    MPI_Datatype block_t, resized_block_t;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_size(MPI_COMM_WORLD, &procs);
 
     if (rank == 0) {
         initialize(argc, argv, &N, &A, &B, &C);
-        if (size == 1) {
-            // Use sequential multiplication if just 1 task
-            printf("Using sequential multiplication on 1 task.\n");
+        if (procs == 1) {
+            // Use sequential multiplication if just 1 proc
+            printf("Using sequential multiplication on 1 process.\n");
             matrix_print("Matrix A", N, A);
             matrix_print("Matrix B", N, B);
-            for (i = 0; i < N; ++i) {
-                for (j = 0; j < N; ++j) {
-                    for (k = 0; k < N; ++k) {
-                        C[i*N+j] += A[i*N+k] * B[k*N+j];
-                    }
-                }
-            }
+            matrix_mult(N, A, B, C);
             matrix_print("Matrix C", N, C);
         }
     }
 
-    if (size == 1) {
+    if (procs == 1) {
         MPI_Finalize();
         return 0;
     }
 
-
-    // Number of tasks must be a perfect square
-    double fsize_sqrt = sqrt(size);
-    int isize_sqrt = fsize_sqrt;
-    if (fsize_sqrt != isize_sqrt) {
+    // Number of processes must be a perfect square
+    const double fprocs_sqrt = sqrt(procs);
+    const int procs_sqrt = fprocs_sqrt;
+    if (procs_sqrt != fprocs_sqrt) {
         if (rank == 0) {
-            fprintf(stderr, "Number of tasks (%d) is not a perfect square\n", size);
+            fprintf(stderr, "Number of processes (%d) is not a perfect square\n", procs);
         }
         MPI_Finalize();
         return 0;
     }
 
-    // Broadcast N, the matrix dimension, to all tasks
+    // Broadcast N, the matrix dimension, to all processes
     MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    dims[0] = N;
-    dims[1] = N;
 
     // Matrices must be partitioned into equal sized blocks
-    if (N % isize_sqrt != 0) {
+    if (N % procs_sqrt != 0) {
         if (rank == 0) {
-            fprintf(stderr, "Cannot partition %dx%d matrices with %d tasks. "
-                    "Ensure N/SQRT(tasks) is an integral number.\n", N, N, size);
+            fprintf(stderr, "Cannot partition %dx%d matrices on %d processes. "
+                    "Ensure N/SQRT(processes) is an integral number.\n", N, N, procs);
         }
         MPI_Finalize();
         return 0;
     }
 
-    if (rank == 0) {
-        printf("Partitioned the %dx%d matrices over %d tasks.\n", N, N, size);
+    // Runtime knowledge
+    const int N_sub = N / procs_sqrt;
+    const int N_sub_squared = N_sub * N_sub;
+    const int array_sizes[2] = { N, N };
+    const int block_sizes[2] = { N_sub, N_sub };
+    const int cart_dims[2] = { procs_sqrt, procs_sqrt };
+    AUTO_PTR(free_array) int *block_counts = calloc(procs, sizeof(int));
+    AUTO_PTR(free_array) int *block_displs = calloc(procs, sizeof(int));
+
+    // One block per process
+    for (i = 0; i < procs; ++i) {
+        block_counts[i] = 1;
     }
 
-    // Use a cartesian process topology matching the array dimensions
-    MPI_Cart_create(MPI_COMM_WORLD, dims_sz, dims, periods, reorder, &cartesian);
-    MPI_Comm_rank(cartesian, &rank);
-    MPI_Cart_coords(cartesian, rank, dims_sz, coords);
-    MPI_Cart_shift(cartesian, 1, 1, &rank_left, &rank_right);
-    MPI_Cart_shift(cartesian, 0, 1, &rank_up, &rank_down);
-
-    if (rank == 0) {
-        // Initial shift of ith row of A left by i
-        for (i = 0; i < N; ++i) {
-            j = i;
-            while (j--) {
-                matrix_shift_row_left(i, N, A);
-            }
-        }
-
-        // Initial shift of jth col of B up by j
-        for (j = 0; j < N; ++j) {
-            i = j;
-            while (i--) {
-                matrix_shift_col_up(j, N, B);
-            }
-        }
+    // The starting extents of each block
+    for (i = 0; i < procs; ++i) {
+        int row = i / procs_sqrt;
+        int col = i % procs_sqrt;
+        block_displs[i] = row * N_sub * procs_sqrt + col;
     }
 
+    // Create subarray type to scatter blocks with one message
+    MPI_Type_create_subarray(2, array_sizes, block_sizes, starts, MPI_ORDER_C, MPI_INT, &block_t);
+    MPI_Type_create_resized(block_t, 0, N_sub * sizeof(int), &resized_block_t);
+    MPI_Type_commit(&resized_block_t);
+
+    // Use a cartesian process topology
+    MPI_Cart_create(MPI_COMM_WORLD, 2, cart_dims, periods, reorder, &cart_comm);
+    MPI_Comm_rank(cart_comm, &rank);
+
+    // Allocate local submatrices (blocks)
+    local_A = calloc(N_sub_squared, sizeof(*local_A));
+    local_B = calloc(N_sub_squared, sizeof(*local_B));
+    local_C = calloc(N_sub_squared, sizeof(*local_C));
+
+    // Rank 0 scatters blocks of size N_sub x N_sub to all processes
+    MPI_Scatterv(A, block_counts, block_displs, resized_block_t,
+                 local_A, N_sub_squared, MPI_INT, 0, cart_comm);
+    MPI_Scatterv(B, block_counts, block_displs, resized_block_t,
+                 local_B, N_sub_squared, MPI_INT, 0, cart_comm);
+
+    // Use cartesian coordinates to guide Cannon's initial block shifts:
+    // Row 0 shifts left 0, row 1 shifts left 1, etc.
+    // Col 0 shifts up 0, col 1 shifts up 1, etc.
+    MPI_Cart_coords(cart_comm, rank, 2, coords);
+    MPI_Cart_shift(cart_comm, 1, coords[0], &left, &right);
+    MPI_Cart_shift(cart_comm, 0, coords[1], &up, &down);
+    MPI_Sendrecv_replace(local_A, N_sub_squared, MPI_INT, left, 1, right, 1, cart_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv_replace(local_B, N_sub_squared, MPI_INT, up, 1, down, 1, cart_comm, MPI_STATUS_IGNORE);
+
+    // Set left and up block shifts to 1 for the rest of the algorithm
+    MPI_Cart_shift(cart_comm, 1, 1, &left, &right);
+    MPI_Cart_shift(cart_comm, 0, 1, &up, &down);
+
     if (rank == 0) {
+        printf("Partitioned the %dx%d matrices on %d processes of %dx%d each.\n",
+               N, N, procs, N_sub, N_sub);
         matrix_print("Matrix A", N, A);
         matrix_print("Matrix B", N, B);
     }
 
-    // Rank 0 scatters all A(i,j) and B(i,j) to local_data of process (i,j)
-    MPI_Scatter(A, 1, MPI_INT, &local_data[0], 1, MPI_INT, 0, cartesian);
-    MPI_Scatter(B, 1, MPI_INT, &local_data[1], 1, MPI_INT, 0, cartesian);
+    // Each process multiplies, accumulates and shifts on its local data
+    for (i = 0; i < procs_sqrt; ++i) {
+        // Multiply and accumulate local block
+        matrix_mult(N_sub, local_A, local_B, local_C);
 
-    // Process (i,j) performs N accumulate/shift on its local data
-    for (i = 0; i < N; ++i) {
-        // Accumulate the local sum for C(i,j)
-        local_sum += local_data[0] * local_data[1];
-
-        // Send local_data[0] left by one and local_data[1] up by one
-        MPI_Sendrecv_replace(&local_data[0], 1, MPI_INT, rank_left, 1,
-                             rank_right, 1, cartesian, MPI_STATUS_IGNORE);
-        MPI_Sendrecv_replace(&local_data[1], 1, MPI_INT, rank_up, 1,
-                             rank_down, 1, cartesian, MPI_STATUS_IGNORE);
+        // Shift block local_A left by one rank and local_B up by one rank
+        MPI_Sendrecv_replace(local_A, N_sub_squared, MPI_INT, left, 1,
+                             right, 1, cart_comm, MPI_STATUS_IGNORE);
+        MPI_Sendrecv_replace(local_B, N_sub_squared, MPI_INT, up, 1,
+                             down, 1, cart_comm, MPI_STATUS_IGNORE);
     }
 
-    // Rank 0 gathers the final sum C(i,j) from each process (i,j)
-    MPI_Gather(&local_sum, 1, MPI_INT, C, 1, MPI_INT, 0, cartesian);
+    // Rank 0 gathers the final C matrix from all process local_C blocks
+    MPI_Gatherv(local_C, N_sub_squared, MPI_INT, C, block_counts,
+                block_displs, resized_block_t, 0, cart_comm);
 
     if (rank == 0) {
         matrix_print("Matrix C", N, C);
     }
 
+    MPI_Type_free(&resized_block_t);
     MPI_Finalize();
+
+#ifndef HAVE_ATTRIBUTE_CLEANUP
+    if (rank == 0) {
+        free(A);
+        free(B);
+        free(C);
+    }
+    free(local_A);
+    free(local_B);
+    free(local_C);
+    free(block_count);
+    free(block_displs);
+#endif
     return 0;
 }
 
+
 /*
- * Initialize is for rank 0 only: parse options, read and set up matrices.
+ * Free an array.
+ */
+void free_array(int **A)
+{
+    free (*A);
+}
+
+/*
+ * Initialize rank 0 only: parse options, read and set up matrices.
  */
 void initialize(int argc, char *argv[], int *N, int **A, int **B, int **C)
 {
@@ -255,31 +301,46 @@ void initialize(int argc, char *argv[], int *N, int **A, int **B, int **C)
 }
 
 /*
+ * Multiply arrays A, B sequentially and accumulate result in C.
+ */
+void matrix_mult(int N, int *A, int *B, int *C)
+{
+    int i, j, k;
+    for (i = 0; i < N; ++i) {
+        for (j = 0; j < N; ++j) {
+            for (k = 0; k < N; ++k) {
+                C[i*N+j] += A[i*N+k] * B[k*N+j];
+            }
+        }
+    }
+}
+
+/*
  * Read N and two N x N integer matrices from file.
  */
 void matrix_read(FILE *fp, int *N, int **A, int **B)
 { 
     int i;
-    int N_SQUARED = 0;
+    int N_squared = 0;
 
     fscanf(fp, "%d", N);
     assert((N != NULL) && (*N >= 1) && (*N <= 1000));
-    N_SQUARED = *N * *N;
+    N_squared = *N * *N;
     
-    *A = calloc(N_SQUARED, sizeof(**A));
+    *A = calloc(N_squared, sizeof(**A));
     assert(*A != NULL);
 
-    *B = calloc(N_SQUARED, sizeof(**B));
+    *B = calloc(N_squared, sizeof(**B));
     assert(*B != NULL);
 
     i = 0;
-    while(i < N_SQUARED) {
+    while(i < N_squared) {
         fscanf(fp, "%d", &(*A)[i]);
         ++i;
     }
 
     i = 0;
-    while(i < N_SQUARED) {
+    while(i < N_squared) {
         fscanf(fp, "%d", &(*B)[i]);
         ++i;
     }
@@ -297,38 +358,4 @@ void matrix_print(const char *desc, int N, int *A)
             printf("%5d%c", A[i*N+j], (j == N-1) ? '\n' : ' ');
         }
     }
-}
-
-/*
- * Shift the matrix row left by 1 with circular wrapping.
- */
-void matrix_shift_row_left(int row, int N, int *A)
-{
-    int j, tmp;
-    tmp = A[row*N];
-    for (j = 0; j < N-1; ++j) {
-        A[row*N+j] = A[row*N+j+1];
-    }
-    A[row*N+j] = tmp;
-}
-
-/*
- * Shift the matrix col up by 1 with circular wrapping.
- */
-void matrix_shift_col_up(int col, int N, int *B)
-{
-    int i, tmp;
-    tmp  = B[col];
-    for (i = 0; i < N-1; ++i) {
-        B[i*N+col] = B[(i+1)*N+col];
-    }
-    B[i*N+col] = tmp;
-}
-
-/*
- * Free the matrix memory when leaving scope.
- */
-void matrix_free(int **M)
-{
-    free (*M);
 }
