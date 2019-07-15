@@ -63,12 +63,13 @@ void usage()
 /*
  * Read a file of two square (N x N) matrices and multiply them in parallel
  * using Cannon's generalized algorithm. The number of processes assigned
- * must be in the range [1 <= np <= N] where N/sqrt(np) is an integral number.
+ * must be in the range [1 <= np <= N*N] where np is a perfect square and
+ * N/sqrt(np) is an integral number.
  *
  * If 1 process is indicated, sequential multiplication is used which can be
  * useful for reference to the parallel algorithm.
  *
- * If N is indicated, each cell of the resultant matrix is assigned a single
+ * If N*N is indicated, each cell of the resultant matrix is assigned a single
  * process.
  *
  * If np is indicated, a submatrix (block) of size N/sqrt(np) x N/sqrt(np)

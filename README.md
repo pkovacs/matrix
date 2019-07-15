@@ -22,7 +22,7 @@ To run on a single process:
 
     $ cannon/cannon -m ../test/6x6.txt
 
-Note that running the program with 1 process only causes it to use sequential
+Note that running the program with 1 process causes it to use sequential
 multiplication which can be useful for reference comparision to the parallel
 processing result when running with more than 1 process.
 
