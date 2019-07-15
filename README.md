@@ -32,24 +32,24 @@ To run with mpirun, possibly across several nodes:
     # Ensure the program binary exists along the same path on all nodes. 
     # Only the rank 0 starting process needs access to the matrix file.
 
-    $ mpirun -np 1 cannon/cannon ../test/6x6.txt
-    $ mpirun -np 4 cannon/cannon ../test/6x6.txt
-    $ mpirun -np 9 cannon/cannon ../test/6x6.txt
-    $ mpirun -np 36 cannon/cannon ../test/6x6.txt
+    $ mpirun -np 1 cannon/cannon -m ../test/6x6.txt
+    $ mpirun -np 4 cannon/cannon -m ../test/6x6.txt
+    $ mpirun -np 9 cannon/cannon -m ../test/6x6.txt
+    $ mpirun -np 36 cannon/cannon -m ../test/6x6.txt
 
     are all valid process counts for that matrix.
 
 To split across explicit hosts:
 
-    $ mpirun --host <node0>:2,<node1>:2 cannon/cannon ../test/6x6.txt
-    $ mpirun --host <node0>:3,<node1>:6 cannon/cannon ../test/6x6.txt
+    $ mpirun --host <node0>:2,<node1>:2 cannon/cannon -m ../test/6x6.txt
+    $ mpirun --host <node0>:3,<node1>:6 cannon/cannon -m ../test/6x6.txt
     etc., or use a hosts file.
 
 To run with slurm:
 
-    $ srun -n 4 --mpi=pmix cannon/cannon ../test/6x6.txt
-    $ srun -n 9 --mpi=pmix cannon/cannon ../test/6x6.txt
-    $ srun -n 36 --mpi=pmix cannon/cannon ../test/6x6.txt
+    $ srun -n 4 --mpi=pmix cannon/cannon -m ../test/6x6.txt
+    $ srun -n 9 --mpi=pmix cannon/cannon -m ../test/6x6.txt
+    $ srun -n 36 --mpi=pmix cannon/cannon -m ../test/6x6.txt
     etc.
 
 The program verifies the validity of the process count and may complain 
