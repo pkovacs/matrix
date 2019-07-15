@@ -26,7 +26,7 @@ Note that running the program with 1 process only causes it to use sequential
 multiplication which can be useful for reference comparision to the parallel
 processing result when running with more than 1 process.
 
-To run with mpirun, possible across several nodes:
+To run with mpirun, possibly across several nodes:
 
     # Ensure your mpi installations are valid and identical on all nodes.
     # Ensure the program binary exists along the same path on all nodes. 
@@ -48,13 +48,14 @@ To split across explicit hosts:
 To run with slurm:
 
     $ srun -n 4 --mpi=pmix cannon/cannon ../test/6x6.txt
+    $ srun -n 9 --mpi=pmix cannon/cannon ../test/6x6.txt
     $ srun -n 36 --mpi=pmix cannon/cannon ../test/6x6.txt
     etc.
 
 The program verifies the validity of the process count and may complain 
 with helpful messages such as:
 
-    Number of processes (2) is not a perfect square
+    Number of processes (7) is not a perfect square
 
     or
 
