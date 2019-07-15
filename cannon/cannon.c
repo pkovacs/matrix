@@ -37,12 +37,12 @@
 #include <mpi.h>
 
 #ifdef HAVE_ATTRIBUTE_CLEANUP
-#define AUTO_PTR(free_fn) __attribute__((cleanup (free_fn)))
+#define AUTO_PTR(fn) __attribute__((cleanup(fn)))
 #else
-#define AUTO_PTR(free_fn)
+#define AUTO_PTR(fn)
 #endif
 
-void free_array(int **A);
+void free_buffer(int **A);
 void initialize(int argc, char *argv[], int *N, int **A, int **B, int **C);
 void matrix_mult(int N, int *A, int *B, int *C);
 void matrix_read(FILE *fp, int *N, int **A, int **B);
@@ -83,14 +83,14 @@ void usage()
 int main(int argc, char *argv[])
 {
     // Rank 0 matrices
-    AUTO_PTR(free_array) int *A = NULL;
-    AUTO_PTR(free_array) int *B = NULL;
-    AUTO_PTR(free_array) int *C = NULL;
+    AUTO_PTR(free_buffer) int *A = NULL;
+    AUTO_PTR(free_buffer) int *B = NULL;
+    AUTO_PTR(free_buffer) int *C = NULL;
 
     // Local submatrices
-    AUTO_PTR(free_array) int *local_A = NULL;
-    AUTO_PTR(free_array) int *local_B = NULL;
-    AUTO_PTR(free_array) int *local_C = NULL;
+    AUTO_PTR(free_buffer) int *local_A = NULL;
+    AUTO_PTR(free_buffer) int *local_B = NULL;
+    AUTO_PTR(free_buffer) int *local_C = NULL;
 
     int N = 0;
     int i;
@@ -154,8 +154,8 @@ int main(int argc, char *argv[])
     const int array_sizes[2] = { N, N };
     const int block_sizes[2] = { N_sub, N_sub };
     const int cart_dims[2] = { procs_sqrt, procs_sqrt };
-    AUTO_PTR(free_array) int *block_counts = calloc(procs, sizeof(int));
-    AUTO_PTR(free_array) int *block_displs = calloc(procs, sizeof(int));
+    AUTO_PTR(free_buffer) int *block_counts = calloc(procs, sizeof(int));
+    AUTO_PTR(free_buffer) int *block_displs = calloc(procs, sizeof(int));
 
     // One block per process
     for (i = 0; i < procs; ++i) {
@@ -244,14 +244,15 @@ int main(int argc, char *argv[])
     free(block_count);
     free(block_displs);
 #endif
+
     return 0;
 }
 
 
 /*
- * Free an array.
+ * Free a buffer.
  */
-void free_array(int **A)
+void free_buffer(int **A)
 {
     free (*A);
 }
