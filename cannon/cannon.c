@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
         matrix_print("Matrix B", N, B);
     }
 
-    // Each process multiplies, accumulates and shifts on its local data
+    // Each process multiplies, accumulates and shifts its local data
     for (i = 0; i < procs_sqrt; ++i) {
         // Multiply and accumulate local block
         matrix_mult(N_sub, local_A, local_B, local_C);
