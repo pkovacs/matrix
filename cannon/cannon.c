@@ -171,7 +171,8 @@ int main(int argc, char *argv[])
     }
 
     // Create subarray type to scatter blocks with one message
-    MPI_Type_create_subarray(2, array_sizes, block_sizes, starts, MPI_ORDER_C, MPI_INT, &block_t);
+    MPI_Type_create_subarray(2, array_sizes, block_sizes, starts, MPI_ORDER_C,
+                             MPI_INT, &block_t);
     MPI_Type_create_resized(block_t, 0, N_sub * sizeof(int), &resized_block_t);
     MPI_Type_commit(&resized_block_t);
 
@@ -191,15 +192,17 @@ int main(int argc, char *argv[])
                  local_B, N_sub_squared, MPI_INT, 0, cart_comm);
 
     // Use cartesian coordinates to guide Cannon's initial block shifts:
-    // Row 0 shifts left 0, row 1 shifts left 1, etc.
-    // Col 0 shifts up 0, col 1 shifts up 1, etc.
+    // Row 0 shifts left 0 ranks, row 1 shifts left 1 rank, etc.
+    // Col 0 shifts up 0 ranks, col 1 shifts up 1 rank, etc.
     MPI_Cart_coords(cart_comm, rank, 2, coords);
     MPI_Cart_shift(cart_comm, 1, coords[0], &left, &right);
     MPI_Cart_shift(cart_comm, 0, coords[1], &up, &down);
-    MPI_Sendrecv_replace(local_A, N_sub_squared, MPI_INT, left, 1, right, 1, cart_comm, MPI_STATUS_IGNORE);
-    MPI_Sendrecv_replace(local_B, N_sub_squared, MPI_INT, up, 1, down, 1, cart_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv_replace(local_A, N_sub_squared, MPI_INT, left, 1, right, 1,
+                         cart_comm, MPI_STATUS_IGNORE);
+    MPI_Sendrecv_replace(local_B, N_sub_squared, MPI_INT, up, 1, down, 1,
+                         cart_comm, MPI_STATUS_IGNORE);
 
-    // Set left and up block shifts to 1 for the rest of the algorithm
+    // Set left and up block shifts to 1 rank for the rest of the algorithm
     MPI_Cart_shift(cart_comm, 1, 1, &left, &right);
     MPI_Cart_shift(cart_comm, 0, 1, &up, &down);
 
