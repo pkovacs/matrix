@@ -28,7 +28,7 @@ processing result when running with more than 1 process.
 
 To run with mpirun, possibly across several nodes:
 
-    # Ensure your mpi installations are valid and identical on all nodes.
+    # Ensure your MPI installations are valid and identical on all nodes.
     # Ensure the program binary exists along the same path on all nodes. 
     # Only the rank 0 starting process needs access to the matrix file.
 
