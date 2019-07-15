@@ -13,7 +13,7 @@ To build:
     $ cd build
     $ cmake ..
     or 
-    $ cmake -DCMAKE_DEBUG_BUILD ..
+    $ cmake -DCMAKE_BUILD_TYPE=Debug ..
     $ make
     or 
     $ make VERBOSE=1
