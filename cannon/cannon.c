@@ -61,11 +61,24 @@ void usage()
 }
 
 /*
- * Read a file of two square matrices and multiply them in parallel
- * using Cannon's generalized algorithm.  You may assign fewer tasks
- * than N*N, in which case each task handles a submatrix, as long as 
- * N / sqrt(tasks) is an integer value and thus the matrices can be
- * partitioned into equal blocks.  
+ * Read a file of two square (N x N) matrices and multiply them in parallel
+ * using Cannon's generalized algorithm. The number of processes assigned
+ * must be in the range [1 <= np <= N] where N/sqrt(np) is an integral number.
+ *
+ * If 1 process is indicated, sequential multiplication is used which can be
+ * useful for reference to the parallel algorithm.
+ *
+ * If N is indicated, each cell of the resultant matrix is assigned a single
+ * process.
+ *
+ * If np is indicated, a submatrix (block) of size N/sqrt(np) x N/sqrt(np)
+ * is assigned to each process.
+ *
+ * Example:
+ *
+ * Two 6x6 matrices may be multiplied sequentially with np = 1 or in parallel
+ * with np = 4 (4 blocks of 3x3); np = 9 (9 blocks of 2x2); or np = 36
+ * (1 cell per process).
  */
 int main(int argc, char *argv[])
 {
