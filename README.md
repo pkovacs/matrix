@@ -1,4 +1,6 @@
-# Cannon's Generalized Algorithm, implemented with MPI.
+## Matrix parallel processing implementations
+
+### Cannon's Generalized Algorithm (MPI)
 
 To build:
 
@@ -42,27 +44,27 @@ To run with slurm:
 The program verifies the validity of the process count and may complain 
 with helpful messages such as:
 
-    `Number of processes (2) is not a perfect square'
+    Number of processes (2) is not a perfect square
 
     or
 
-    `Cannot partition 16x16 matrices on 9 processes. Ensure N/SQRT(processes) is an integral number.'
+    Cannot partition 16x16 matrices on 9 processes. Ensure N/SQRT(processes) is an integral number.
 
 Typical output would look like this:
 
-    Partitioned the 4x4 matrices on 4 processes of 2x2 each.
-    ---- Matrix A ----
-     1     2     3     4
-     5     6     7     8
-     9    10    11    12
-    13    14    15    16
-    ---- Matrix B ----
-     1     5     9    13
-     2     6    10    14
-     3     7    11    15
-     4     8    12    16
-    ---- Matrix C ----
-    30    70   110   150
-    70   174   278   382
-   110   278   446   614
-   150   382   614   846
+     Partitioned the 4x4 matrices on 4 processes of 2x2 each.
+     ---- Matrix A ----
+      1     2     3     4
+      5     6     7     8
+      9    10    11    12
+     13    14    15    16
+     ---- Matrix B ----
+      1     5     9    13
+      2     6    10    14
+      3     7    11    15
+      4     8    12    16
+     ---- Matrix C ----
+     30    70   110   150
+     70   174   278   382
+    110   278   446   614
+    150   382   614   846
