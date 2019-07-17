@@ -47,14 +47,17 @@ To split across explicit hosts:
 
 To run with slurm:
 
+    # Distribute binary cannon with sbcast
+    # Distribute matrix input file with sbcast
+
     $ salloc -n 9 sh
     salloc: Granted job allocation XXX
-    # distribute matrix input file from this launch point
+    $ sbcast -f cannon/cannon $HOME/$$-cannon
     $ sbcast -f ../test/6x6.txt /tmp/$$-6x6.txt
-    $ srun --mpi=pmix cannon/cannon -m /tmp/$$-6x6.txt
+    $ srun --mpi=pmix $HOME/$$-cannon -m /tmp/$$-6x6.txt
     Partitioned the 6x6 matrices on 9 processes of 2x2 each.
     ... (result) ...
-    $ srun rm -f /tmp/$$-6x6.txt
+    $ srun rm -f $HOME/$$-cannon /tmp/$$-6x6.txt
     $ exit
     salloc: Relinquishing job allocation XXX
 
