@@ -49,7 +49,7 @@ To run with slurm:
 
     $ salloc -n 9 sh
     salloc: Granted job allocation XXX
-    # distribute matrix file input from this launch point
+    # distribute matrix input file from this launch point
     $ sbcast -f ../test/6x6.txt /tmp/$$-6x6.txt
     $ srun --mpi=pmix cannon/cannon -m /tmp/$$-6x6.txt
     Partitioned the 6x6 matrices on 9 processes of 2x2 each.
