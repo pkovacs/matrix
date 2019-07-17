@@ -47,7 +47,7 @@ To split across explicit hosts:
 
 To run with slurm:
 
-    # Distribute binary cannon with sbcast
+    # Distribute cannon binary with sbcast
     # Distribute matrix input file with sbcast
 
     $ salloc -n 9 sh
