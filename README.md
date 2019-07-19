@@ -1,7 +1,7 @@
-## Matrix parallel processing implementations
+### Matrix parallel processing implementations
 
-### Cannon's Generalized Algorithm (MPI)
-### SUMMA (block) Algorithm (MPI)
+* Cannon's Generalized Algorithm (MPI)
+* SUMMA (block) Algorithm (MPI)
 
 To build:
 
