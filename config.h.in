@@ -45,6 +45,7 @@
 #cmakedefine HAVE_FPRINTF
 #cmakedefine HAVE_FSCANF
 #cmakedefine HAVE_GETOPT_LONG
+#cmakedefine HAVE_MEMCPY
 #cmakedefine HAVE_PRINTF
 #cmakedefine HAVE_SQRT
 #cmakedefine HAVE_STRERROR

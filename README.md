@@ -1,6 +1,7 @@
 ## Matrix parallel processing implementations
 
 ### Cannon's Generalized Algorithm (MPI)
+### SUMMA (block) Algorithm (MPI)
 
 To build:
 
@@ -21,6 +22,7 @@ To build:
 To run on a single process:
 
     $ cannon/cannon -m ../test/6x6.txt
+    $ summa/summa -m ../test/6x6.txt
 
 Note that running the program with 1 process causes it to use sequential
 multiplication which can be useful for reference comparision to the parallel
@@ -37,17 +39,25 @@ To run with mpirun, possibly across several nodes:
     $ mpirun -np 9 cannon/cannon -m ../test/6x6.txt
     $ mpirun -np 36 cannon/cannon -m ../test/6x6.txt
 
+    $ mpirun -np 1 summa/summa -m ../test/6x6.txt
+    $ mpirun -np 4 summa/summa -m ../test/6x6.txt
+    $ mpirun -np 9 summa/summa -m ../test/6x6.txt
+    $ mpirun -np 36 summa/summa -m ../test/6x6.txt
+
     are all valid process counts for that matrix.
 
 To split across explicit hosts:
 
     $ mpirun --host <node0>:2,<node1>:2 cannon/cannon -m ../test/6x6.txt
     $ mpirun --host <node0>:3,<node1>:6 cannon/cannon -m ../test/6x6.txt
+
+    $ mpirun --host <node0>:2,<node1>:2 summa/summa -m ../test/6x6.txt
+    $ mpirun --host <node0>:3,<node1>:6 summa/summa -m ../test/6x6.txt
     etc., or use a hosts file.
 
 To run with slurm:
 
-    # Distribute cannon binary with sbcast
+    # Distribute cannon or slurm binary with sbcast
     # Distribute matrix input file with sbcast
 
     $ salloc -n 9 sh

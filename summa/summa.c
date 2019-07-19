@@ -53,7 +53,7 @@ void matrix_print(const char *desc, int N, int *A);
  */
 void usage()
 {
-    fprintf(stderr, "usage: cannon <options>\n"
+    fprintf(stderr, "usage: summa <options>\n"
                     "  Options are:\n"
                     "    --help|-h:        print this help\n"
                     "    --matrix|-m:      matrix input file\n"
@@ -62,9 +62,9 @@ void usage()
 
 /*
  * Read a file of two square (N x N) matrices and multiply them in parallel
- * using Cannon's generalized algorithm. The number of processes assigned
- * must be in the range [1 <= np <= N*N] where np is a perfect square and
- * N/sqrt(np) is an integral number.
+ * using the Summa block algorithm. The number of processes assigned must be
+ * in the range [1 <= np <= N*N] where np is a perfect square and N/sqrt(np)
+ * is an integral number.
  *
  * If 1 process is indicated, sequential multiplication is used which can be
  * useful for reference to the parallel algorithm.
@@ -93,15 +93,19 @@ int main(int argc, char *argv[])
     AUTO_PTR(free_buffer) int *local_B = NULL;
     AUTO_PTR(free_buffer) int *local_C = NULL;
 
+    AUTO_PTR(free_buffer) int *local_A_save = NULL;
+    AUTO_PTR(free_buffer) int *local_B_save = NULL;
+
     int N = 0;
     int i;
-    int rank, procs;
-    int left, right, down, up;
-    int coords[2];
+    int rank, rank_row, rank_col;
+    int procs;
     const int periods[2] = { 1, 1 };
     const int starts[2] = { 0, 0 };
     const int reorder = 1;
-    MPI_Comm cart_comm;
+    const int cart_row_dims[2] = { 1, 0 };
+    const int cart_col_dims[2] = { 0, 1 };
+    MPI_Comm cart_comm, cart_row_comm, cart_col_comm;
     MPI_Datatype block_t, resized_block_t;
 
     MPI_Init(&argc, &argv);
@@ -176,14 +180,20 @@ int main(int argc, char *argv[])
     MPI_Type_create_resized(block_t, 0, N_sub * sizeof(int), &resized_block_t);
     MPI_Type_commit(&resized_block_t);
 
-    // Use a cartesian process topology
+    // Use a cartesian process topology with subtopologies for rows and cols
     MPI_Cart_create(MPI_COMM_WORLD, 2, cart_dims, periods, reorder, &cart_comm);
+    MPI_Cart_sub(cart_comm, cart_row_dims, &cart_row_comm);
+    MPI_Cart_sub(cart_comm, cart_col_dims, &cart_col_comm);
     MPI_Comm_rank(cart_comm, &rank);
+    MPI_Comm_rank(cart_row_comm, &rank_row);
+    MPI_Comm_rank(cart_col_comm, &rank_col);
 
     // Allocate local submatrices (blocks)
     local_A = calloc(N_sub_squared, sizeof(*local_A));
     local_B = calloc(N_sub_squared, sizeof(*local_B));
     local_C = calloc(N_sub_squared, sizeof(*local_C));
+    local_A_save = calloc(N_sub_squared, sizeof(*local_A));
+    local_B_save = calloc(N_sub_squared, sizeof(*local_B));
 
     // Rank 0 scatters blocks of size N_sub x N_sub to all processes
     MPI_Scatterv(A, block_counts, block_displs, resized_block_t,
@@ -191,20 +201,9 @@ int main(int argc, char *argv[])
     MPI_Scatterv(B, block_counts, block_displs, resized_block_t,
                  local_B, N_sub_squared, MPI_INT, 0, cart_comm);
 
-    // Use cartesian coordinates to guide Cannon's initial block shifts:
-    // Row 0 shifts left 0 ranks, row 1 shifts left 1 rank, etc.
-    // Col 0 shifts up 0 ranks, col 1 shifts up 1 rank, etc.
-    MPI_Cart_coords(cart_comm, rank, 2, coords);
-    MPI_Cart_shift(cart_comm, 1, coords[0], &left, &right);
-    MPI_Cart_shift(cart_comm, 0, coords[1], &up, &down);
-    MPI_Sendrecv_replace(local_A, N_sub_squared, MPI_INT, left, 1, right, 1,
-                         cart_comm, MPI_STATUS_IGNORE);
-    MPI_Sendrecv_replace(local_B, N_sub_squared, MPI_INT, up, 1, down, 1,
-                         cart_comm, MPI_STATUS_IGNORE);
-
-    // Set left and up block shifts to 1 rank for the rest of the algorithm
-    MPI_Cart_shift(cart_comm, 1, 1, &left, &right);
-    MPI_Cart_shift(cart_comm, 0, 1, &up, &down);
+    // Save originally scattered local blocks so we can restore them for bcasts
+    memcpy(local_A_save, local_A, N_sub_squared * sizeof(*local_A));
+    memcpy(local_B_save, local_B, N_sub_squared * sizeof(*local_B));
 
     if (rank == 0) {
         printf("Partitioned the %dx%d matrices on %d processes of %dx%d each.\n",
@@ -213,16 +212,24 @@ int main(int argc, char *argv[])
         matrix_print("Matrix B", N, B);
     }
 
-    // Each process multiplies, accumulates and shifts its local data
+    // Each process broadcasts and then accumulates its local data
     for (i = 0; i < procs_sqrt; ++i) {
+        if (rank_col == i) {
+            // Restore original local A for bcast
+            memcpy(local_A, local_A_save, N_sub_squared * sizeof(*local_A));
+        }
+        // Broadcast A to all columns
+        MPI_Bcast(local_A, N_sub_squared, MPI_INT, i, cart_col_comm);
+
+        if (rank_row == i) {
+            // Restore original local B for bcast
+            memcpy(local_B, local_B_save, N_sub_squared * sizeof(*local_B));
+        }
+        // Broadcast B to all rows
+        MPI_Bcast(local_B, N_sub_squared, MPI_INT, i, cart_row_comm);
+
         // Multiply and accumulate local block
         matrix_mult(N_sub, local_A, local_B, local_C);
-
-        // Shift block local_A left by one rank and local_B up by one rank
-        MPI_Sendrecv_replace(local_A, N_sub_squared, MPI_INT, left, 1,
-                             right, 1, cart_comm, MPI_STATUS_IGNORE);
-        MPI_Sendrecv_replace(local_B, N_sub_squared, MPI_INT, up, 1,
-                             down, 1, cart_comm, MPI_STATUS_IGNORE);
     }
 
     // Rank 0 gathers the final C matrix from all process local_C blocks
@@ -245,6 +252,8 @@ int main(int argc, char *argv[])
     free(local_A);
     free(local_B);
     free(local_C);
+    free(local_A_save);
+    free(local_B_save);
     free(block_count);
     free(block_displs);
 #endif

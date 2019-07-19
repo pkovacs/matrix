@@ -40,8 +40,8 @@ include(TestCompiler)
 # Set project version
 # -------------------
 set(MATRIX_VERSION_MAJOR 0)
-set(MATRIX_VERSION_MINOR 0)
-set(MATRIX_VERSION_PATCH 1)
+set(MATRIX_VERSION_MINOR 1)
+set(MATRIX_VERSION_PATCH 0)
 
 # --------------
 # Set cmake vars
@@ -81,13 +81,14 @@ include_directories(
 # Add subdirectories
 # ------------------
 add_subdirectory(cannon)
+add_subdirectory(summa)
 
 # -----------------
 # Add CPack support
 # -----------------
 set(CPACK_PACKAGE_VERSION_MAJOR ${MATRIX_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${MATRIX_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${MATRIX_VERSION_MICRO})
+set(CPACK_PACKAGE_VERSION_PATCH ${MATRIX_VERSION_PATCH})
 set(CPACK_GENERATOR "TGZ")
 include(CPack)
 
