@@ -43,10 +43,9 @@ set(MATRIX_VERSION_MAJOR 0)
 set(MATRIX_VERSION_MINOR 1)
 set(MATRIX_VERSION_PATCH 0)
 
-# --------------
-# Set cmake vars
-# --------------
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+# -----------------
+# Set compile flags
+# -----------------
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -Wformat -Wformat-security -Wunused-result -Wall -Wextra -Werror -pedantic")
 set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
@@ -86,10 +85,16 @@ add_subdirectory(summa)
 # -----------------
 # Add CPack support
 # -----------------
+set(CPACK_GENERATOR "TGZ")
+set(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION_MAJOR ${MATRIX_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${MATRIX_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${MATRIX_VERSION_PATCH})
-set(CPACK_GENERATOR "TGZ")
+string(CONCAT CPACK_PACKAGE_VERSION
+    "${MATRIX_VERSION_MAJOR}."
+    "${MATRIX_VERSION_MINOR}."
+    "${MATRIX_VERSION_PATCH}")
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION})
 include(CPack)
 
 # vi:set ts=2 sw=2 et ai:
