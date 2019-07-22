@@ -24,7 +24,7 @@
 
 include(CheckLibraryExists)
 
-CHECK_LIBRARY_EXISTS(m sqrt "" HAVE_SQRT)
-IF(NOT HAVE_SQRT)
+check_library_exists(m sqrt "" HAVE_SQRT)
+if(NOT HAVE_SQRT)
     message(FATAL_ERROR "sqrt not found")
-ENDIF()
+endif()

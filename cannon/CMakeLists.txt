@@ -22,47 +22,28 @@
 # SOFTWARE.
 #
 
-# -------------------
-# sources and headers
-# -------------------
-set(sources
-  cannon.c
-)
-
-set(headers
-)
-
-# -----------------
-# define executable
-# -----------------
 add_executable(cannon
-  ${sources}
-  ${headers}
+    cannon.c
 )
 
 target_include_directories(cannon
-  PRIVATE ${MPI_C_INCLUDE_PATH}
+    PRIVATE ${MPI_C_INCLUDE_PATH}
 )
 
 target_compile_options(cannon
-  PRIVATE ${MPI_C_COMPILE_FLAGS}
+    PRIVATE ${MPI_C_COMPILE_FLAGS}
 )
 
 target_link_libraries(cannon
-  ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS}
-  -lm
+    ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS}
+    -lm
 )
 
 set_target_properties(cannon
-  PROPERTIES
-  OUTPUT_NAME "cannon"
+    PROPERTIES
+    OUTPUT_NAME "cannon"
 )
 
-# ------------------
-# install executable
-# ------------------
 install(TARGETS
-  cannon
-  DESTINATION bin)
-
-# vi:set ts=2 sw=2 et ai:
+    cannon
+    DESTINATION ${CMAKE_INSTALL_LIBDIR})

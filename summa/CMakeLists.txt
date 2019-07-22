@@ -22,47 +22,28 @@
 # SOFTWARE.
 #
 
-# -------------------
-# sources and headers
-# -------------------
-set(sources
-  summa.c
-)
-
-set(headers
-)
-
-# -----------------
-# define executable
-# -----------------
 add_executable(summa
-  ${sources}
-  ${headers}
+    summa.c
 )
 
 target_include_directories(summa
-  PRIVATE ${MPI_C_INCLUDE_PATH}
+    PRIVATE ${MPI_C_INCLUDE_PATH}
 )
 
 target_compile_options(summa
-  PRIVATE ${MPI_C_COMPILE_FLAGS}
+    PRIVATE ${MPI_C_COMPILE_FLAGS}
 )
 
 target_link_libraries(summa
-  ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS}
-  -lm
+    ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS}
+    -lm
 )
 
 set_target_properties(summa
-  PROPERTIES
-  OUTPUT_NAME "summa"
+    PROPERTIES
+    OUTPUT_NAME "summa"
 )
 
-# ------------------
-# install executable
-# ------------------
 install(TARGETS
-  summa
-  DESTINATION bin)
-
-# vi:set ts=2 sw=2 et ai:
+    summa
+    DESTINATION ${CMAKE_INSTALL_BINDIR})

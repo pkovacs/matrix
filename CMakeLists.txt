@@ -24,8 +24,10 @@
 
 project(matrix C)
 cmake_minimum_required(VERSION 3.8.0 FATAL_ERROR)
-find_package(MPI REQUIRED)
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include(GNUInstallDirs)
+find_package(MPI REQUIRED)
 
 # ------------
 # Local checks
@@ -46,7 +48,10 @@ set(MATRIX_VERSION_PATCH 0)
 # -----------------
 # Set compile flags
 # -----------------
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -Wformat -Wformat-security -Wunused-result -Wall -Wextra -Werror -pedantic")
+string(CONCAT LOCAL_C_FLAGS
+    "-std=c11 -Wformat -Wformat-security -Wunused-result "
+    "-Wall -Wextra -Werror -pedantic")
+list(APPEND CMAKE_C_FLAGS ${LOCAL_C_FLAGS})
 set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
@@ -64,16 +69,16 @@ configure_file(
     ${CMAKE_BINARY_DIR}/config.h
 )
 add_definitions(-DHAVE_CONFIG_H)
-IF(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-        add_definitions(-DDEBUG)
-ENDIF()
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    add_definitions(-DDEBUG)
+endif()
 
 # -------------------
 # Include directories
 # -------------------
 include_directories(
-  ${CMAKE_BINARY_DIR}
-  ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}
 )
 
 # ------------------
@@ -96,5 +101,3 @@ string(CONCAT CPACK_PACKAGE_VERSION
     "${MATRIX_VERSION_PATCH}")
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION})
 include(CPack)
-
-# vi:set ts=2 sw=2 et ai:

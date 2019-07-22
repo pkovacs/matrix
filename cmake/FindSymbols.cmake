@@ -24,7 +24,7 @@
 
 include(CheckSymbolExists)
 
-CHECK_SYMBOL_EXISTS("assert" "assert.h" HAVE_ASSERT)
-IF(NOT HAVE_ASSERT)
+check_symbol_exists("assert" "assert.h" HAVE_ASSERT)
+if(NOT HAVE_ASSERT)
     message(FATAL_ERROR "assert not found")
-ENDIF()
+endif()
