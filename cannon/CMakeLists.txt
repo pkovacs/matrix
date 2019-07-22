@@ -46,4 +46,4 @@ set_target_properties(cannon
 
 install(TARGETS
     cannon
-    DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
